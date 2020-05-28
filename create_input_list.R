@@ -5,7 +5,7 @@ library(tidyverse)
 
 #set working directory to where PatchVars are kept
 
-setwd("D:/OneDrive/GEM3_PostDoc/Agent-Based-Models/Theoretical_Paper/inputs/subset_test/patchvars")
+setwd("D:/OneDrive/GEM3_PostDoc/Agent-Based-Models/Theoretical_Paper/inputs/high_stray/patchvars")
 
 input_files = list.files(pattern = "PatchVars*", 
                          full.names = TRUE, 
@@ -15,10 +15,23 @@ input_files = list.files(pattern = "PatchVars*",
 
 file_names <- as.data.frame(input_files$filename)
 
+file_names <- rename(file_names, Name = 'input_files$filename')
+
 file_names <- unique(file_names)
+
+file_names$Name <- as.character(file_names$Name)
+
+#now to add the prefix needed for the PopVars file, and then combine the two
 
 #go back to the directory where the PopVars file will be held
 
-setwd("D:/OneDrive/GEM3_PostDoc/Agent-Based-Models/Theoretical_Paper/inputs/subset_test")
+file_names$prefix <- c('patchvars/')
 
-write.csv(file_names, "PatchVar_List.csv", row.names = FALSE)
+file_names$suffix <- c('.csv')
+
+PopVar_Names <- file_names %>%
+  unite(Final, prefix, Name, suffix, sep = "")
+
+setwd("D:/OneDrive/GEM3_PostDoc/Agent-Based-Models/Theoretical_Paper/inputs/high_stray")
+
+write.csv(PopVar_Names, "PatchVar_List.csv", row.names = FALSE)
