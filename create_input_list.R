@@ -32,6 +32,6 @@ file_names$suffix <- c('.csv')
 PopVar_Names <- file_names %>%
   unite(Final, prefix, Name, suffix, sep = "")
 
-setwd("D:/OneDrive/GEM3_PostDoc/Agent-Based-Models/Theoretical_Paper/inputs/high_stray")
 
-write.csv(PopVar_Names, "PatchVar_List.csv", row.names = FALSE)
+
+write.csv(PopVar_Names, "../PatchVar_List.csv", row.names = FALSE)
