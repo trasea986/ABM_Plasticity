@@ -1,45 +1,60 @@
 #script for creating the data frame from the output files
 #you need to have the PopVar_Names object from the "create_input_list.R" to quickyly get the run names in to the dataframe
 
-
 library(tidyverse)
 library(cowplot)
 
+time_test_start = Sys.time()
+print(time_test_start)
 
 #go to input folder, where the output files from CDMetaPop are created
 
-setwd("D:/OneDrive/GEM3_PostDoc/Agent-Based-Models/Theoretical_Paper/outputs")
+input_files = list.files(pattern = "PatchVars*", 
+                         full.names = TRUE, 
+                         recursive = TRUE, 
+                         include.dirs = TRUE) %>% 
+  map_df(function(x) read_csv(x, col_types = cols(.default = "c")) %>% mutate(filename=gsub(".csv","",basename(x))))
+
+file_names <- as.data.frame(input_files$filename)
+
+file_names <- rename(file_names, Name = 'input_files$filename')
+
+file_names <- unique(file_names)
+
+file_names$Name <- as.character(file_names$Name)
+
+#now to add the prefix needed for the PopVars file, and then combine the two
+
+#go back to the directory where the PopVars file will be held
+
+file_names$prefix <- c('patchvars/')
+
+file_names$suffix <- c('.csv')
+
+PopVar_Names <- file_names %>%
+  unite(Final, prefix, Name, suffix, sep = "")
+
+print('PopVar_Names has been created')
 
 #create list of files, pulling in individuals output file
 #because of R memory issues only pulling in every 10 years
 #if simulating for much longer I may need to bring in dispersal or het/hom independently then combine dfs in R
 
 #original "ind.0|ind0"
-#changed for non-overlap 100 years
+#changed to every 20 due to memory issues
 
-output_files = list.files(pattern = "ind190|ind120|ind180", 
-                         full.names = TRUE, 
-                         recursive = TRUE, 
-                         include.dirs = TRUE) %>% 
+output_files = list.files(pattern = "ind10|ind30|ind50|ind70|ind90|ind110|ind130|ind150|ind170|ind190", 
+                          full.names = TRUE, 
+                          recursive = TRUE, 
+                          include.dirs = TRUE) %>% 
   map_df(function(x) read_csv(x, col_types = cols(.default = "c")) %>% mutate(filename=gsub(".csv","",file.path(x))))
 
-output_files = output_files[1:100,]
+print('output files imported')
 
-gc()
-#create year column from file directory
-# original code, modified to work within one output folder: 
 data_df <- separate(data = output_files, col = filename, into = c('dot', 'fecun', 'evo', 'stray','space','runinfo','batchmc','year'), sep = "/")
-
-
-#before doing more column manipulation, going to remove folders not of interest
-#data_df <- subset(data_df, disp != 'subset_test')
-
-#subsetting to first 10 fish to speed up test of formatting columns
-#data_df1 <- data_df[1:10,]
 
 #breakout the year from ind
 data_df <- separate(data = data_df, col = year, into = c('ind', 'year'), sep = "d")
-
 
 #old code break the evolution state
 #data_df <- separate(data = data_df, col = evo, into = c('evo', 'junk1', 'junk2'), sep = "_")
@@ -55,35 +70,19 @@ data_df <- separate(data = data_df, col = stray, into = c('stray', 'junk2'), sep
 data_df <- separate(data = data_df, col = batchmc, into = c('run', 'rep'), sep = "m")
 data_df <- separate(data = data_df, col = run, into = c('junk3', 'run'), sep = "n")
 data_df <- separate(data = data_df, col = rep, into = c('junk4', 'rep'), sep = "n")
+data_df <- separate(data = data_df, col = fecun, into = c('fecun', 'junk5'), sep = "n")
 #now to remove columns of junk: dot, junk1, junk2, ind. Doing in two steps in case that is useful later
 
-junk <- c('dot', 'junk1', 'junk2', 'junk3', 'junk4', 'ind')
+junk <- c('dot', 'junk1', 'junk2', 'junk3', 'junk4', 'junk5', 'ind')
 data_df <- data_df[ , !(names(data_df) %in% junk)]
 
-
+print('columns fixed')
 
 
 #next step is to replace the run value with each. going to add row numbers for join and split up name to the different factors. Note PopVar_Names comes from the create_inpute_list.R
 PopVar_Names2 <- separate(data = PopVar_Names, col = Final, into = c('junk', 'run'), sep = "/")
 
 PopVar_Names2 <- separate(data = PopVar_Names2, col = run, into = c('run', 'junk'), sep = ".cs")
-
-#this is old code prior to changing how panmixia files were names
-
-#splitting run is a bit more complicated. Might need to change my naming convention in the future so that the same number of "_" is used for each run name. Manually changing for now...
-
-#PopVar_Names2[25, 1] = 'PatchVars_pan_mix_eggmort_20'
-#PopVar_Names2[26, 1] = 'PatchVars_pan_mix_eggmort_60'
-#PopVar_Names2[27, 1] = 'PatchVars_pan_mix_movemort_20'
-#PopVar_Names2[28, 1] = 'PatchVars_pan_mix_movemort_60'
-
-#use the following when dealing with the most_bad files
-#PopVar_Names2[1, 1] =	'PatchVars_pan_mix_eggmort_10'
-#PopVar_Names2[2, 1] =	'PatchVars_pan_mix_eggmort_15'
-#PopVar_Names2[3, 1] =	'PatchVars_pan_mix_eggmort_20'
-#PopVar_Names2[4, 1] =	'PatchVars_pan_mix_movemort_10'
-#PopVar_Names2[5, 1] =	'PatchVars_pan_mix_movemort_15'
-#PopVar_Names2[6, 1] =	'PatchVars_pan_mix_movemort_20'
 
 PopVar_Names2 <- separate(data = PopVar_Names2, col = run, into = c('junk','name1', 'name2', 'mort', 'value'), sep = "_")
 
@@ -96,11 +95,35 @@ PopVar_Names2$run_name<- with(PopVar_Names2, paste0(name1, name2))
 junk2 <- c('junk', 'name1', 'name2')
 PopVar_Names2 <- PopVar_Names2[ , !(names(PopVar_Names2) %in% junk2)]
 
-
 #so now we need to bind the names from PopVar_Names2 to the data_df by joining row_num to run. also note CMP starts at 0 for run.
 PopVar_Names2$run <- seq.int(nrow(PopVar_Names2))
 PopVar_Names2$run <- PopVar_Names2$run - 1
 PopVar_Names2$run <- as.character(PopVar_Names2$run)
 #data_df$run <- as.factor(data_df$run)
 
+print('PopVar_Names2 complete')
+
 data_df_final <- left_join(data_df, PopVar_Names2, by = 'run')
+
+print('data joined')
+
+#removed making csv, ran out of memory on Marvin
+#write.table(data_df_final, "all_inds.csv", row.names = FALSE)
+#print('all individuals written to file')
+
+#saveRDS(data_df_final, file = "data_ind.rds")
+#print('RDS file saved')
+
+
+#exit <- function() {
+#  .Internal(.invokeRestart(list(NULL, NULL), NULL))
+#}
+
+end_time_final <- Sys.time()
+print(end_time_final)
+total_time <- end_time_final - time_test_start
+print(total_time)
+
+print("this is the last message")
+#exit()
+#print("you should not see this")

@@ -5,7 +5,7 @@ library(tidyverse)
 
 #set working directory to where PatchVars are kept
 
-setwd("D:/OneDrive/GEM3_PostDoc/Agent-Based-Models/Theoretical_Paper/inputs/high_stray/patchvars")
+setwd("D:/OneDrive/GEM3_PostDoc/Agent-Based-Models/Theoretical_Paper/outputs")
 
 input_files = list.files(pattern = "PatchVars*", 
                          full.names = TRUE, 
@@ -34,4 +34,4 @@ PopVar_Names <- file_names %>%
 
 
 
-write.csv(PopVar_Names, "../PatchVar_List.csv", row.names = FALSE)
+write.csv(PopVar_Names, "PatchVar_List.csv", row.names = FALSE)

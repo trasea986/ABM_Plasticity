@@ -3,6 +3,7 @@
 library(tidyverse)
 library(cowplot)
 
+#data_df_final <- readRDS('data_ind.rds')
 
 #convert characters to their correct columns
 #note that the genetics really should be a factor, but giving it a number makes downstream calulations easier
@@ -17,6 +18,7 @@ data_df_final$CDist <- as.numeric(data_df_final$CDist)
 data_df_final$disp <- as.factor(data_df_final$disp)
 data_df_final$evo <- as.factor(data_df_final$evo)
 data_df_final$run_name <- as.factor(data_df_final$run_name)
+data_df_final$rep <- as.factor(data_df_final$rep)
 data_df_final$year <- as.numeric(data_df_final$year)
 data_df_final$mort <- as.factor(data_df_final$mort)
 data_df_final$value <- as.factor(data_df_final$value)
@@ -39,7 +41,7 @@ ggplot(data=population_df, aes(x=year, y=n, linetype = evo, color = value)) +
   labs(x = "Time (years)", y = "Population Size") +
   facet_wrap(run_name~mort) +
   scale_color_brewer(palette = "Dark2")+
-  ylim(0, 16000) +
+  ylim(0, 18000) +
   theme_bw(base_size = 14) +
   geom_line(linetype= "solid", color = "black", size = 1.25, aes(x=year), y=(15000))
 
@@ -64,7 +66,7 @@ ggplot(data=population_dend_df, aes(x=year, y=n, linetype = evo, color = value))
 
 #going to make seperate dataframes here for each locus and graph proportion with the plastic allele and whether it is turned on or not
 #sum gives the total number of alleles in the population
-#not that this is with cdevolvans = 1
+#note that this is with cdevolvans = 1
 
 data_L1A0 <- data_df_final %>%
   group_by(disp, evo, run_name, mort, value, year) %>%
@@ -193,8 +195,9 @@ ggplot(data=data_df_prop_egg_60, aes(x = year, y = prop, color=Allele, linetype 
 #just looking at plastic region, by doing inverse of L1A0
 
 data_df_prop_egg_L1A0 <- subset(data_df_prop_egg, Allele == 'L1A0')
-ggplot(data=data_df_prop_egg_60_L1A0, aes(x = year, y = prop, color=value, linetype = evo)) +
-  geom_point()+
+
+ggplot(data=data_df_prop_egg_L1A0, aes(x = year, y = prop, color=value, linetype = evo)) +
+  #geom_point()+
   geom_smooth(method = "lm", se = FALSE, size = 1.25) +
   facet_wrap(~run_name) +
   labs(x = "Time (years)", y = "Allele Proportion", color="Value", fill="Value", shape="Value", linetype = "Dominance") +
@@ -209,9 +212,10 @@ ggplot(data=data_df_prop_egg_60_L1A0, aes(x = year, y = prop, color=value, linet
 
 
 #create new df with calculated change in proportion of non-plastic region??
-data_df_prop_change <- subset(data_df_prop, year == '0')
-data_df_prop_change <- rbind(subset(data_df_prop, year == '90'), subset(data_df_prop, year == '0'))
+data_df_prop_change <- subset(data_df_prop, year == '10')
+data_df_prop_change <- rbind(subset(data_df_prop, year == '50'), subset(data_df_prop, year == '10'))
 data_df_prop_change <- subset(data_df_prop_change, Allele == 'L1A0')
+
 
 #now that we have only that region, we need to remove the count and n column so when it spreads those differences do not sep. the 0 from 90
 
@@ -221,13 +225,20 @@ data_df_prop_change2 <- data_df_prop_change %>%
   group_by(disp, evo, run_name, mort, value) %>%
   spread(year, prop)
 
-data_df_prop_change2$difference <- data_df_prop_change2$'90' - data_df_prop_change2$'0'
+#one challenge is pops that don't make it to the end, so going to set all of those to zero as a quick work-around
 
-ggplot(data_df_prop_change2, aes(x=abs(difference))) +
+data_df_prop_change2[is.na(data_df_prop_change2)] <- 0
+data_df_prop_change2$difference <- data_df_prop_change2$'50' - data_df_prop_change2$'10'
+
+ggplot(data_df_prop_change2, aes(x=(difference))) +
   geom_histogram(col="black", fill="green", alpha = .2) +
+  facet_wrap(~value) +
   theme_bw()
 
-
+ggplot(data_df_prop_change2, aes(x=(difference))) +
+  geom_histogram(col="black", fill="green", alpha = .2) +
+  facet_wrap(~evo) +
+  theme_bw()
 
 #now to look at pop and genetic counts spatially
 
